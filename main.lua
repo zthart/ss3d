@@ -16,7 +16,7 @@ function love.load()
     Timer = 0
 
     Scene.camera.pos.x = 0
-    Scene.camera.pos.z = 5
+    Scene.camera.pos.z = 10
 
     -- define vertices to be used in the creation of a new Model object for the Scene
     local cubeVerts = {}
@@ -70,7 +70,16 @@ function love.load()
 
     -- turn the vertices into a Model with a texture
     CubeModel = Engine.newModel(cubeVerts, DefaultTexture)
-    Scene:addModel(CubeModel)
+
+	Scene:addModel(CubeModel)
+   
+	-- perform some basic .obj parsing on the teapot model
+	teapotVerts = Engine.parseObj("teapot.obj")
+
+	Teapot = Engine.newModel(teapotVerts, DefaultTexture)
+	Teapot.wireframe = true
+
+	Scene:addModel(Teapot)
 
     local pyramidVerts = {}
     pyramidVerts[#pyramidVerts+1] = {-1,-1,-1}
@@ -119,7 +128,7 @@ function love.update(dt)
     -- make the CubeModel go in circles and rotate
     Timer = Timer + dt/4
     CubeModel:setTransform({0,-1.5,0}, {Timer, cpml.vec3.unit_y, Timer, cpml.vec3.unit_z, Timer, cpml.vec3.unit_x})
-
+	Teapot:setTransform({0, 3, 0}, {Timer, cpml.vec3.unit_y, Timer, cpml.vec3.unit_z, Timer, cpml.vec3.unit_x})
     for i=1, #Pyramids do
         Pyramids[i]:setTransform({math.cos(Timer +i*math.pi*0.5)*12, math.sin(Timer +i)*0.75 +1, math.sin(Timer +i*math.pi*0.5)*12}, {Timer, cpml.vec3.unit_y, Timer, cpml.vec3.unit_z, Timer, cpml.vec3.unit_x})
     end

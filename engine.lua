@@ -5,6 +5,83 @@ cpml = require "cpml"
 
 local engine = {}
 
+-- Simple .obj parsing
+-- At the moment, this parser only parses vertices, texture coordinates, vertex normals, and polygon elements (not 
+-- including texture coordinat indices or vertex normal indices). I would like to flesh out this implementation in 
+-- the future, but for the moment this fits my needs
+function engine.parseObj(filepath)
+	local file = io.open(filepath)
+	if not file then return nil end
+
+	-- Split up our obj data fields
+	local datasplit = function(toSplit)
+		local out = {}
+
+		local outField, inStart = 1, 1
+		local inFirst, inLast = toSplit:find(" ", inStart)
+
+		while inFirst do
+			out[outField] = toSplit:sub(inStart, inFirst-1)
+			outField = outField + 1
+			inStart = inLast+1
+			inFirst, inLast = toSplit:find(" ", inStart)
+		end
+
+		out[outField] = toSplit:sub(inStart)
+	
+		return out
+	end
+
+	-- If we're given texcoords and vertex normals, we can concat them in the way that our newModel function expects
+	local vert_concat = function(v, vt, vn)
+		if vt ~= nil then
+			for i=1, #vt do
+				v[#v+1] = vt[i]
+			end
+			if vn ~= nil then
+				for i=1, #vn do
+					v[#v+1] = vn[i]
+				end
+			end
+		end
+			
+		return v
+	end
+
+	local verts = {}
+	-- We'll feed the correct verts to the existing newModel function in order to leverage it
+	local polys = {}
+	-- Let's even try parsing u, v values if we can
+	local texcoords = {}
+	-- If there are normals might as well grab those too
+	local norms = {}
+
+	for line in io.lines(filepath) do
+		if line:len() > 0 and line:sub(1, 1) ~= "#" then
+			local data = datasplit(line)
+
+			if data[1] == "v" then
+				verts[#verts+1] = {tonumber(data[2]), tonumber(data[3]), tonumber(data[4])}
+			elseif data[1] == "f" then
+				polys[#polys+1] = {tonumber(data[2]), tonumber(data[3]), tonumber(data[4])}
+			elseif data[1] == "vt" then
+				texcoords[#texcoords+1] = {tonumber(data[2]), tonumber(data[3])}
+		 	elseif data[1] == "vn" then
+				norms[#norms+1] = UnitVectorOf({tonumber(data[2]), tonumber(data[3]), tonumber(data[4])})
+			end
+		end
+	end
+
+	local outverts = {}
+	for _, poly in ipairs(polys) do
+		outverts[#outverts+1] = vert_concat(verts[poly[1]], texcoords[poly[1]], norms[poly[1]])
+		outverts[#outverts+1] = vert_concat(verts[poly[2]], texcoords[poly[2]], norms[poly[2]])
+		outverts[#outverts+1] = vert_concat(verts[poly[3]], texcoords[poly[3]], norms[poly[3]])
+	end
+
+	return outverts
+end
+
 -- create a new Model object
 -- given a table of verts for example: { {0,0,0}, {0,1,0}, {0,0,1} }
 -- each vert is its own table that contains three coordinate numbers, and may contain 2 extra numbers as uv coordinates
